@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MedDiagnose — AI Expert System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0f0d;
+    --surface: #111811;
+    --surface2: #162016;
+    --border: #1e2e1e;
+    --accent: #3ddc68;
+    --accent-dim: #2ba84a;
+    --accent-glow: rgba(61,220,104,0.12);
+    --accent-glow2: rgba(61,220,104,0.06);
+    --text: #e8f0e8;
+    --text-muted: #7a9a7a;
+    --text-dim: #4a6a4a;
+    --red: #ff5555;
+    --orange: #ff9944;
+    --yellow: #ffd666;
+    --mild: #3ddc68;
+    --moderate: #ffaa33;
+    --severe: #ff4444;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── BACKGROUND ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 15% 20%, rgba(61,220,104,0.055) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 60% at 85% 80%, rgba(61,220,104,0.04) 0%, transparent 55%);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* Grid pattern */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: 0.35;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── LAYOUT ── */
+  .wrap { position: relative; z-index: 1; max-width: 1060px; margin: 0 auto; padding: 0 24px 80px; }
+
+  /* ── HEADER ── */
+  header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 40px 0 36px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+
+  .logo-block {}
+  .logo-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; letter-spacing: 0.2em;
+    color: var(--accent); text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .logo-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(28px, 5vw, 44px);
+    line-height: 1;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+  .logo-title em { color: var(--accent); font-style: italic; }
+  .logo-sub {
+    font-size: 12px; color: var(--text-muted);
+    margin-top: 8px; letter-spacing: 0.03em;
+  }
+
+  .header-badge {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+  }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--accent-dim); border: 1px solid var(--border);
+    background: var(--accent-glow2);
+    padding: 5px 10px; border-radius: 100px;
+    letter-spacing: 0.1em;
+  }
+  .badge-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--accent); flex-shrink: 0;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+
+  /* ── DISCLAIMER ── */
+  .disclaimer {
+    background: rgba(255, 85, 85, 0.06);
+    border: 1px solid rgba(255,85,85,0.2);
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 12px;
+    color: #ff9999;
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 36px;
+  }
+
+  /* ── SECTION LABELS ── */
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--accent);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-label::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* ── SEARCH ── */
+  .search-row {
+    display: flex; gap: 10px; margin-bottom: 16px;
+  }
+  .search-input {
+    flex: 1;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); border-radius: 8px;
+    padding: 10px 16px; font-size: 14px; font-family: 'DM Sans', sans-serif;
+    outline: none; transition: border-color 0.2s;
+  }
+  .search-input:focus { border-color: var(--accent-dim); }
+  .search-input::placeholder { color: var(--text-dim); }
+
+  /* ── CATEGORY TABS ── */
+  .category-tabs {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px;
+  }
+  .cat-tab {
+    padding: 5px 12px; border-radius: 100px;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--text-muted); font-size: 11px; font-family: 'DM Mono', monospace;
+    letter-spacing: 0.05em; cursor: pointer; transition: all 0.15s;
+  }
+  .cat-tab:hover { border-color: var(--accent-dim); color: var(--accent-dim); }
+  .cat-tab.active { background: var(--accent-glow); border-color: var(--accent-dim); color: var(--accent); }
+
+  /* ── SYMPTOM GRID ── */
+  .symptom-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+    gap: 8px;
+    margin-bottom: 32px;
+    max-height: 340px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .symptom-grid::-webkit-scrollbar { width: 4px; }
+  .symptom-grid::-webkit-scrollbar-track { background: transparent; }
+  .symptom-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .symptom-chip {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface);
+    cursor: pointer; transition: all 0.15s;
+    user-select: none; position: relative;
+  }
+  .symptom-chip:hover { border-color: var(--accent-dim); background: var(--accent-glow2); }
+  .symptom-chip.selected {
+    border-color: var(--accent); background: var(--accent-glow);
+    box-shadow: 0 0 0 1px var(--accent-dim) inset;
+  }
+  .symptom-chip.hidden { display: none; }
+  .chip-icon { font-size: 16px; flex-shrink: 0; }
+  .chip-label { font-size: 12px; color: var(--text); line-height: 1.3; }
+  .chip-check {
+    position: absolute; top: 6px; right: 6px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent); display: none;
+    align-items: center; justify-content: center;
+    font-size: 8px; color: #000; font-weight: bold;
+  }
+  .symptom-chip.selected .chip-check { display: flex; }
+
+  /* ── SELECTED TRAY ── */
+  .selected-tray {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px;
+    margin-bottom: 24px; min-height: 52px;
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  }
+  .tray-empty { color: var(--text-dim); font-size: 12px; font-style: italic; }
+  .tray-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent-glow); border: 1px solid var(--accent-dim);
+    border-radius: 100px; padding: 4px 10px 4px 8px;
+    font-size: 11px; color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    animation: chipIn 0.2s ease;
+  }
+  @keyframes chipIn { from{opacity:0;transform:scale(0.8)} to{opacity:1;transform:scale(1)} }
+  .tray-remove {
+    cursor: pointer; opacity: 0.6; font-size: 13px; line-height: 1;
+    color: var(--accent); border: none; background: none; padding: 0;
+  }
+  .tray-remove:hover { opacity: 1; }
+
+  /* ── DIAGNOSE BUTTON ── */
+  .btn-diagnose {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; padding: 16px;
+    background: var(--accent); color: #000;
+    border: none; border-radius: 10px; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600;
+    letter-spacing: 0.02em;
+    transition: all 0.2s;
+    margin-bottom: 40px;
+  }
+  .btn-diagnose:hover:not(:disabled) {
+    background: #50e87a;
+    box-shadow: 0 0 32px rgba(61,220,104,0.35);
+    transform: translateY(-1px);
+  }
+  .btn-diagnose:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-diagnose .spinner {
+    width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.3);
+    border-top-color: #000; border-radius: 50%;
+    animation: spin 0.6s linear infinite; display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .btn-diagnose.loading .spinner { display: block; }
+  .btn-diagnose.loading .btn-text { opacity: 0.5; }
+
+  /* ── RESULTS ── */
+  #results { display: none; }
+  #results.visible { display: block; animation: fadeUp 0.4s ease; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+  .result-summary {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 24px; padding: 14px 18px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    font-size: 13px; color: var(--text-muted);
+  }
+  .result-count {
+    font-family: 'DM Serif Display', serif;
+    font-size: 32px; color: var(--accent); line-height: 1;
+  }
+
+  .result-cards { display: flex; flex-direction: column; gap: 14px; }
+
+  .result-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden;
+    transition: border-color 0.2s;
+    animation: cardIn 0.3s ease both;
+  }
+  @keyframes cardIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+  .result-card:hover { border-color: #2a3a2a; }
+  .result-card.rank-1 { border-color: var(--accent-dim); }
+
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; cursor: pointer;
+    border-bottom: 1px solid transparent; transition: border-color 0.2s;
+  }
+  .card-header:hover { background: rgba(255,255,255,0.01); }
+  .card-header.open { border-bottom-color: var(--border); }
+
+  .card-left { display: flex; align-items: center; gap: 14px; }
+  .card-rank {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--text-dim); width: 20px; text-align: center;
+  }
+  .rank-1 .card-rank { color: var(--accent); }
+
+  .card-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 18px; color: var(--text); letter-spacing: -0.01em;
+  }
+
+  .severity-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.12em;
+    text-transform: uppercase; padding: 3px 8px; border-radius: 4px;
+    margin-top: 3px;
+  }
+  .severity-badge.mild    { color: var(--mild);     background: rgba(61,220,104,0.1);  border: 1px solid rgba(61,220,104,0.2);  }
+  .severity-badge.moderate{ color: var(--moderate); background: rgba(255,170,51,0.1);  border: 1px solid rgba(255,170,51,0.2); }
+  .severity-badge.severe  { color: var(--severe);   background: rgba(255,68,68,0.1);   border: 1px solid rgba(255,68,68,0.2);  }
+
+  .card-right { display: flex; align-items: center; gap: 12px; }
+
+  .pct-ring { position: relative; width: 52px; height: 52px; flex-shrink: 0; }
+  .pct-ring svg { transform: rotate(-90deg); }
+  .pct-ring .ring-bg { fill: none; stroke: var(--border); stroke-width: 3; }
+  .pct-ring .ring-fill {
+    fill: none; stroke-width: 3; stroke-linecap: round;
+    transition: stroke-dasharray 1s ease;
+  }
+  .pct-ring .ring-fill.mild     { stroke: var(--mild); }
+  .pct-ring .ring-fill.moderate { stroke: var(--moderate); }
+  .pct-ring .ring-fill.severe   { stroke: var(--severe); }
+  .pct-label {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500;
+    color: var(--text);
+  }
+
+  .chevron { color: var(--text-dim); transition: transform 0.25s; font-size: 12px; }
+  .chevron.open { transform: rotate(180deg); }
+
+  /* card body */
+  .card-body { display: none; padding: 20px; }
+  .card-body.open { display: block; animation: fadeUp 0.2s ease; }
+
+  .card-desc {
+    font-size: 13px; color: var(--text-muted); line-height: 1.7;
+    margin-bottom: 20px; padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .prec-title {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--text-dim); margin-bottom: 10px;
+  }
+  .prec-list { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+  .prec-list li {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: 13px; color: var(--text-muted); line-height: 1.5;
+  }
+  .prec-list li::before {
+    content: '→'; color: var(--accent); flex-shrink: 0; margin-top: 1px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* ── NO RESULT ── */
+  .no-result {
+    text-align: center; padding: 48px 24px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  }
+  .no-result-icon { font-size: 40px; margin-bottom: 12px; }
+  .no-result h3 { font-family: 'DM Serif Display', serif; font-size: 20px; margin-bottom: 8px; }
+  .no-result p { color: var(--text-muted); font-size: 13px; }
+
+  /* ── ENGINE TAG ── */
+  .engine-tag {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--text-dim); text-align: center; margin-top: 20px;
+  }
+  .engine-tag span { color: var(--accent-dim); }
+
+  /* ── PROLOG PANEL ── */
+  .prolog-section { margin-top: 56px; }
+  .prolog-box {
+    background: #060d06; border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px; overflow-x: auto;
+  }
+  .prolog-box pre {
+    font-family: 'DM Mono', monospace; font-size: 12px;
+    line-height: 1.7; color: #8ab88a;
+    white-space: pre; min-width: 0;
+  }
+  .tok-comment { color: #3d6b3d; }
+  .tok-pred    { color: #3ddc68; }
+  .tok-atom    { color: #88c9ff; }
+  .tok-str     { color: #ffd666; }
+  .tok-var     { color: #ff9944; }
+  .tok-punc    { color: #6a8a6a; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 640px) {
+    header { flex-direction: column; align-items: flex-start; gap: 16px; }
+    .symptom-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo-block">
+      <div class="logo-eyebrow">CSA2001 — BYOP Project</div>
+      <h1 class="logo-title">Med<em>Diagnose</em></h1>
+      <p class="logo-sub">Prolog-powered Medical Expert System</p>
+    </div>
+    <div class="header-badge">
+      <div class="badge"><span class="badge-dot"></span> PROLOG ENGINE</div>
+      <div class="badge">15 DISEASES · 36 SYMPTOMS</div>
+    </div>
+  </header>
+
+  <!-- DISCLAIMER -->
+  <div class="disclaimer">
+    ⚠️ &nbsp;<strong>Educational use only.</strong> This system is built as a student project for CSA2001. Always consult a qualified medical professional for real health concerns.
+  </div>
+
+  <!-- SYMPTOM SELECTOR -->
+  <div class="section-label">01 — Select your symptoms</div>
+
+  <div class="search-row">
+    <input class="search-input" type="text" id="searchInput" placeholder="Search symptoms e.g. fever, cough..."/>
+  </div>
+
+  <div class="category-tabs" id="catTabs"></div>
+
+  <div class="symptom-grid" id="symptomGrid"></div>
+
+  <!-- SELECTED TRAY -->
+  <div class="section-label">02 — Selected symptoms</div>
+  <div class="selected-tray" id="selectedTray">
+    <span class="tray-empty" id="trayEmpty">No symptoms selected yet — choose from above</span>
+  </div>
+
+  <!-- DIAGNOSE BUTTON -->
+  <button class="btn-diagnose" id="diagnoseBtn" disabled onclick="diagnose()">
+    <div class="spinner"></div>
+    <span class="btn-text">🔬 &nbsp;Run Prolog Diagnosis Engine</span>
+  </button>
+
+  <!-- RESULTS -->
+  <div id="results">
+    <div class="section-label">03 — Diagnosis results</div>
+    <div class="result-summary" id="resultSummary"></div>
+    <div class="result-cards" id="resultCards"></div>
+    <div class="engine-tag" id="engineTag"></div>
+  </div>
+
+  <!-- PROLOG CODE SECTION -->
+  <div class="prolog-section">
+    <div class="section-label">Prolog Knowledge Base — Sample</div>
+    <div class="prolog-box">
+      <pre id="prologDisplay"></pre>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── SYMPTOMS DATA (mirrors backend) ──────────────────────────
+const SYMPTOMS = [
+  {id:"fever",label:"Fever",icon:"🌡️",cat:"General"},
+  {id:"cough",label:"Cough",icon:"😮‍💨",cat:"Respiratory"},
+  {id:"sore_throat",label:"Sore Throat",icon:"🗣️",cat:"Respiratory"},
+  {id:"runny_nose",label:"Runny Nose",icon:"🤧",cat:"Respiratory"},
+  {id:"headache",label:"Headache",icon:"🤕",cat:"Neurological"},
+  {id:"fatigue",label:"Fatigue",icon:"😴",cat:"General"},
+  {id:"body_ache",label:"Body Ache",icon:"💪",cat:"General"},
+  {id:"chills",label:"Chills",icon:"🥶",cat:"General"},
+  {id:"nausea",label:"Nausea",icon:"🤢",cat:"Digestive"},
+  {id:"vomiting",label:"Vomiting",icon:"🤮",cat:"Digestive"},
+  {id:"diarrhea",label:"Diarrhea",icon:"🚽",cat:"Digestive"},
+  {id:"shortness_of_breath",label:"Shortness of Breath",icon:"💨",cat:"Respiratory"},
+  {id:"chest_pain",label:"Chest Pain",icon:"💔",cat:"Cardiac"},
+  {id:"rash",label:"Skin Rash",icon:"🔴",cat:"Skin"},
+  {id:"itching",label:"Itching",icon:"😖",cat:"Skin"},
+  {id:"loss_of_appetite",label:"Loss of Appetite",icon:"🍽️",cat:"Digestive"},
+  {id:"sweating",label:"Excessive Sweating",icon:"💧",cat:"General"},
+  {id:"dizziness",label:"Dizziness",icon:"😵",cat:"Neurological"},
+  {id:"sneezing",label:"Sneezing",icon:"🤧",cat:"Respiratory"},
+  {id:"watery_eyes",label:"Watery Eyes",icon:"👁️",cat:"General"},
+  {id:"stomach_pain",label:"Stomach Pain",icon:"🤒",cat:"Digestive"},
+  {id:"stiff_neck",label:"Stiff Neck",icon:"🦒",cat:"Neurological"},
+  {id:"sensitivity_to_light",label:"Sensitivity to Light",icon:"🔆",cat:"Neurological"},
+  {id:"yellow_skin",label:"Yellow Skin",icon:"💛",cat:"Skin"},
+  {id:"dark_urine",label:"Dark Urine",icon:"🫗",cat:"General"},
+  {id:"frequent_urination",label:"Frequent Urination",icon:"🚾",cat:"General"},
+  {id:"excessive_thirst",label:"Excessive Thirst",icon:"🥤",cat:"General"},
+  {id:"blurred_vision",label:"Blurred Vision",icon:"👓",cat:"Neurological"},
+  {id:"slow_healing",label:"Slow Healing Wounds",icon:"🩹",cat:"General"},
+  {id:"dry_mouth",label:"Dry Mouth",icon:"👅",cat:"General"},
+  {id:"joint_pain",label:"Joint Pain",icon:"🦴",cat:"Musculoskeletal"},
+  {id:"swollen_joints",label:"Swollen Joints",icon:"🦵",cat:"Musculoskeletal"},
+  {id:"morning_stiffness",label:"Morning Stiffness",icon:"🌅",cat:"Musculoskeletal"},
+  {id:"loss_of_smell",label:"Loss of Smell",icon:"👃",cat:"Neurological"},
+  {id:"loss_of_taste",label:"Loss of Taste",icon:"👄",cat:"Neurological"},
+  {id:"muscle_weakness",label:"Muscle Weakness",icon:"💪",cat:"Musculoskeletal"},
+];
+
+// Built-in Python-equivalent disease DB for offline mode
+const DISEASES_DB = [
+  {id:"common_cold",name:"Common Cold",symptoms:["runny_nose","sneezing","sore_throat","cough","headache"],desc:"A viral infection of the upper respiratory tract.",severity:"mild",prec:["Rest and stay hydrated","Use saline nasal spray","Take OTC cold medicine","Avoid close contact with others"]},
+  {id:"influenza",name:"Influenza",symptoms:["fever","cough","sore_throat","body_ache","headache","fatigue","chills"],desc:"A contagious respiratory illness caused by influenza viruses.",severity:"moderate",prec:["Get annual flu vaccine","Rest adequately","Drink plenty of fluids","Antiviral drugs may help if taken early"]},
+  {id:"covid_19",name:"Covid-19",symptoms:["fever","cough","fatigue","loss_of_smell","loss_of_taste","shortness_of_breath","body_ache"],desc:"A respiratory illness caused by the SARS-CoV-2 coronavirus.",severity:"moderate",prec:["Isolate immediately","Get tested","Monitor oxygen levels","Seek emergency care if breathing worsens","Get vaccinated"]},
+  {id:"dengue_fever",name:"Dengue Fever",symptoms:["fever","headache","body_ache","rash","nausea","vomiting","fatigue"],desc:"A mosquito-borne viral disease prevalent in tropical regions.",severity:"moderate",prec:["Use mosquito repellent","Stay hydrated","Monitor platelet count","Avoid aspirin or ibuprofen","Hospitalize if severe"]},
+  {id:"malaria",name:"Malaria",symptoms:["fever","chills","sweating","headache","nausea","vomiting","fatigue"],desc:"A life-threatening disease caused by Plasmodium parasites transmitted by mosquitoes.",severity:"severe",prec:["Take prescribed antimalarial drugs","Use mosquito nets","Seek immediate medical care","Complete full course of medication"]},
+  {id:"typhoid_fever",name:"Typhoid Fever",symptoms:["fever","headache","stomach_pain","nausea","loss_of_appetite","fatigue","diarrhea"],desc:"A bacterial infection caused by Salmonella typhi, spread through contaminated food and water.",severity:"moderate",prec:["Take prescribed antibiotics","Drink only boiled or purified water","Wash hands frequently","Get vaccinated"]},
+  {id:"gastroenteritis",name:"Gastroenteritis",symptoms:["nausea","vomiting","diarrhea","stomach_pain","fever","fatigue"],desc:"Inflammation of the stomach and intestines, commonly called stomach flu.",severity:"mild",prec:["Stay hydrated with ORS","Eat light easily digestible food","Rest","Wash hands frequently"]},
+  {id:"pneumonia",name:"Pneumonia",symptoms:["fever","cough","shortness_of_breath","chest_pain","fatigue","chills"],desc:"A serious lung infection that inflames air sacs in one or both lungs.",severity:"severe",prec:["Seek immediate medical care","Take prescribed antibiotics","Rest completely","Get pneumococcal vaccine","Avoid smoking"]},
+  {id:"allergic_rhinitis",name:"Allergic Rhinitis",symptoms:["sneezing","runny_nose","itching","watery_eyes","headache"],desc:"An allergic response causing cold-like symptoms, triggered by pollen, dust or animal dander.",severity:"mild",prec:["Identify and avoid allergens","Use antihistamines","Keep windows closed during high pollen","Use air purifier at home"]},
+  {id:"type2_diabetes",name:"Type 2 Diabetes",symptoms:["frequent_urination","excessive_thirst","fatigue","blurred_vision","slow_healing","dry_mouth"],desc:"A chronic condition affecting blood sugar regulation due to insulin resistance.",severity:"severe",prec:["Monitor blood sugar regularly","Follow a low-sugar diet","Exercise daily","Take prescribed medication","Regular doctor checkups"]},
+  {id:"arthritis",name:"Arthritis",symptoms:["joint_pain","swollen_joints","morning_stiffness","fatigue","body_ache"],desc:"Inflammation of one or more joints causing pain and stiffness.",severity:"moderate",prec:["Regular low-impact exercise","Take anti-inflammatory medication","Physical therapy","Maintain healthy weight","Apply hot/cold packs"]},
+  {id:"meningitis",name:"Meningitis",symptoms:["fever","headache","stiff_neck","nausea","sensitivity_to_light","fatigue"],desc:"Inflammation of membranes surrounding the brain and spinal cord, often due to infection.",severity:"severe",prec:["SEEK EMERGENCY MEDICAL CARE IMMEDIATELY","Hospitalization required","Antibiotics or antiviral treatment","Meningitis vaccine available"]},
+  {id:"jaundice",name:"Jaundice",symptoms:["yellow_skin","dark_urine","fatigue","nausea","loss_of_appetite","stomach_pain"],desc:"A condition causing yellowing of skin and eyes due to excess bilirubin in the blood.",severity:"moderate",prec:["Rest completely","Avoid alcohol","Stay hydrated","Eat a healthy liver-friendly diet","Seek medical evaluation for root cause"]},
+  {id:"migraine",name:"Migraine",symptoms:["headache","nausea","sensitivity_to_light","dizziness","fatigue","vomiting"],desc:"A neurological condition causing intense recurring headaches often with other symptoms.",severity:"moderate",prec:["Rest in a dark quiet room","Take prescribed migraine medication","Stay hydrated","Identify and avoid personal triggers","Track episodes in a journal"]},
+  {id:"asthma",name:"Asthma",symptoms:["shortness_of_breath","cough","chest_pain","fatigue"],desc:"A chronic respiratory condition where airways narrow and swell, producing extra mucus.",severity:"moderate",prec:["Use prescribed inhaler","Avoid known triggers","Monitor peak flow","Create an asthma action plan","Regular pulmonologist visits"]},
+];
+
+// ── STATE ────────────────────────────────────────────────────
+let selected = new Set();
+let activeCategory = 'All';
+
+// ── INIT ─────────────────────────────────────────────────────
+function init() {
+  buildCategoryTabs();
+  buildSymptomGrid();
+  renderPrologCode();
+  document.getElementById('searchInput').addEventListener('input', filterSymptoms);
+}
+
+function buildCategoryTabs() {
+  const cats = ['All', ...new Set(SYMPTOMS.map(s => s.cat))];
+  const container = document.getElementById('catTabs');
+  cats.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-tab' + (cat === 'All' ? ' active' : '');
+    btn.textContent = cat;
+    btn.onclick = () => { activeCategory = cat; filterSymptoms(); document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active')); btn.classList.add('active'); };
+    container.appendChild(btn);
+  });
+}
+
+function buildSymptomGrid() {
+  const grid = document.getElementById('symptomGrid');
+  SYMPTOMS.forEach(s => {
+    const chip = document.createElement('div');
+    chip.className = 'symptom-chip';
+    chip.dataset.id = s.id;
+    chip.dataset.cat = s.cat;
+    chip.dataset.label = s.label.toLowerCase();
+    chip.innerHTML = `<span class="chip-icon">${s.icon}</span><span class="chip-label">${s.label}</span><span class="chip-check">✓</span>`;
+    chip.onclick = () => toggleSymptom(s.id, chip);
+    grid.appendChild(chip);
+  });
+}
+
+function filterSymptoms() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  document.querySelectorAll('.symptom-chip').forEach(chip => {
+    const matchCat = activeCategory === 'All' || chip.dataset.cat === activeCategory;
+    const matchQ   = !q || chip.dataset.label.includes(q);
+    chip.classList.toggle('hidden', !(matchCat && matchQ));
+  });
+}
+
+function toggleSymptom(id, el) {
+  if (selected.has(id)) {
+    selected.delete(id);
+    el.classList.remove('selected');
+  } else {
+    selected.add(id);
+    el.classList.add('selected');
+  }
+  renderTray();
+  document.getElementById('diagnoseBtn').disabled = selected.size === 0;
+}
+
+function removeSymptom(id) {
+  selected.delete(id);
+  document.querySelector(`.symptom-chip[data-id="${id}"]`)?.classList.remove('selected');
+  renderTray();
+  document.getElementById('diagnoseBtn').disabled = selected.size === 0;
+}
+
+function renderTray() {
+  const tray = document.getElementById('selectedTray');
+  const empty = document.getElementById('trayEmpty');
+  tray.querySelectorAll('.tray-chip').forEach(c => c.remove());
+  if (selected.size === 0) { empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  selected.forEach(id => {
+    const s = SYMPTOMS.find(x => x.id === id);
+    if (!s) return;
+    const chip = document.createElement('div');
+    chip.className = 'tray-chip';
+    chip.innerHTML = `${s.icon} ${s.label} <button class="tray-remove" onclick="removeSymptom('${id}')">✕</button>`;
+    tray.appendChild(chip);
+  });
+}
+
+// ── DIAGNOSIS ────────────────────────────────────────────────
+async function diagnose() {
+  const btn = document.getElementById('diagnoseBtn');
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  const symptoms = [...selected];
+
+  // Try backend first, fallback to client-side
+  let results = null;
+  let engine = 'JavaScript (offline)';
+
+  try {
+    const resp = await fetch('http://localhost:5000/api/diagnose', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({symptoms}),
+      signal: AbortSignal.timeout(4000)
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      results = data.diagnoses;
+      engine = data.engine;
+    }
+  } catch(e) {
+    results = null;
+  }
+
+  if (!results) {
+    results = clientDiagnose(symptoms);
+    engine = 'JavaScript (Prolog logic — offline mode)';
+  }
+
+  btn.classList.remove('loading');
+  btn.disabled = false;
+
+  renderResults(results, symptoms, engine);
+}
+
+function clientDiagnose(symptoms) {
+  const userSet = new Set(symptoms);
+  const results = [];
+  DISEASES_DB.forEach(d => {
+    const total   = d.symptoms.length;
+    const matched = d.symptoms.filter(s => userSet.has(s)).length;
+    const pct     = total > 0 ? Math.round((matched / total) * 100) : 0;
+    if (pct >= 50) results.push({disease: d.name, disease_id: d.id, percentage: pct, description: d.desc, severity: d.severity, precautions: d.prec});
+  });
+  return results.sort((a,b) => b.percentage - a.percentage);
+}
+
+// ── RENDER RESULTS ───────────────────────────────────────────
+function renderResults(results, symptoms, engine) {
+  const section = document.getElementById('results');
+  const summary = document.getElementById('resultSummary');
+  const cards   = document.getElementById('resultCards');
+  const engTag  = document.getElementById('engineTag');
+
+  cards.innerHTML = '';
+  section.classList.add('visible');
+  section.scrollIntoView({behavior:'smooth', block:'start'});
+
+  summary.innerHTML = results.length > 0
+    ? `<span class="result-count">${results.length}</span> potential condition${results.length !== 1 ? 's' : ''} matched based on <strong>${symptoms.length}</strong> symptom${symptoms.length !== 1 ? 's' : ''}.`
+    : `No conditions matched the selected symptoms at ≥ 50% threshold.`;
+
+  engTag.innerHTML = `Diagnosis engine: <span>${engine}</span>`;
+
+  if (results.length === 0) {
+    cards.innerHTML = `<div class="no-result"><div class="no-result-icon">🔍</div><h3>No matches found</h3><p>Try selecting more symptoms or different combinations.</p></div>`;
+    return;
+  }
+
+  results.forEach((r, i) => {
+    const circ = 2 * Math.PI * 18;
+    const fill  = circ * (r.percentage / 100);
+    const card  = document.createElement('div');
+    card.className = `result-card ${i === 0 ? 'rank-1' : ''}`;
+    card.style.animationDelay = `${i * 0.06}s`;
+
+    card.innerHTML = `
+      <div class="card-header" onclick="toggleCard(this)">
+        <div class="card-left">
+          <span class="card-rank">#${i+1}</span>
+          <div>
+            <div class="card-name">${r.disease}</div>
+            <span class="severity-badge ${r.severity}">${r.severity}</span>
+          </div>
+        </div>
+        <div class="card-right">
+          <div class="pct-ring">
+            <svg viewBox="0 0 44 44" width="52" height="52">
+              <circle class="ring-bg" cx="22" cy="22" r="18"/>
+              <circle class="ring-fill ${r.severity}" cx="22" cy="22" r="18"
+                stroke-dasharray="${fill} ${circ}" stroke-dashoffset="0"/>
+            </svg>
+            <div class="pct-label">${r.percentage}%</div>
+          </div>
+          <span class="chevron">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">${r.description}</p>
+        <div class="prec-title">Recommended Precautions</div>
+        <ul class="prec-list">${r.precautions.map(p=>`<li>${p}</li>`).join('')}</ul>
+      </div>`;
+    cards.appendChild(card);
+  });
+
+  // Auto-open top result
+  const firstHeader = cards.querySelector('.card-header');
+  if (firstHeader) toggleCard(firstHeader);
+}
+
+function toggleCard(header) {
+  const body = header.nextElementSibling;
+  const chev = header.querySelector('.chevron');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  header.classList.toggle('open', !isOpen);
+  chev.classList.toggle('open', !isOpen);
+}
+
+// ── PROLOG CODE DISPLAY ──────────────────────────────────────
+function renderPrologCode() {
+  const code = `<span class="tok-comment">% ============================================================
+% Medical Diagnosis Expert System — Prolog Knowledge Base
+% CSA2001 — Fundamentals in AI and ML
+% ============================================================
+
+% SYMPTOM FACTS</span>
+<span class="tok-pred">symptom</span><span class="tok-punc">(</span><span class="tok-atom">fever</span><span class="tok-punc">,</span> <span class="tok-str">'High body temperature'</span><span class="tok-punc">).</span>
+<span class="tok-pred">symptom</span><span class="tok-punc">(</span><span class="tok-atom">cough</span><span class="tok-punc">,</span> <span class="tok-str">'Persistent coughing'</span><span class="tok-punc">).</span>
+<span class="tok-pred">symptom</span><span class="tok-punc">(</span><span class="tok-atom">fatigue</span><span class="tok-punc">,</span> <span class="tok-str">'Extreme tiredness or lack of energy'</span><span class="tok-punc">).</span>
+<span class="tok-comment">% ... (36 symptoms defined)</span>
+
+<span class="tok-comment">% DISEASE RULES</span>
+<span class="tok-pred">disease</span><span class="tok-punc">(</span><span class="tok-atom">influenza</span><span class="tok-punc">,</span>
+    <span class="tok-punc">[</span><span class="tok-atom">fever</span><span class="tok-punc">,</span> <span class="tok-atom">cough</span><span class="tok-punc">,</span> <span class="tok-atom">sore_throat</span><span class="tok-punc">,</span> <span class="tok-atom">body_ache</span><span class="tok-punc">,</span>
+     <span class="tok-atom">headache</span><span class="tok-punc">,</span> <span class="tok-atom">fatigue</span><span class="tok-punc">,</span> <span class="tok-atom">chills</span><span class="tok-punc">],</span>
+    <span class="tok-str">'A contagious respiratory illness caused by influenza viruses.'</span><span class="tok-punc">,</span>
+    <span class="tok-atom">moderate</span><span class="tok-punc">,</span>
+    <span class="tok-punc">[</span><span class="tok-str">'Get annual flu vaccine'</span><span class="tok-punc">,</span> <span class="tok-str">'Rest adequately'</span><span class="tok-punc">,</span>
+     <span class="tok-str">'Drink plenty of fluids'</span><span class="tok-punc">]).</span>
+
+<span class="tok-comment">% DIAGNOSIS ENGINE — Match percentage rule</span>
+<span class="tok-pred">match_percentage</span><span class="tok-punc">(</span><span class="tok-var">DiseaseSymptoms</span><span class="tok-punc">,</span> <span class="tok-var">UserSymptoms</span><span class="tok-punc">,</span> <span class="tok-var">Percentage</span><span class="tok-punc">) :-</span>
+    <span class="tok-pred">length</span><span class="tok-punc">(</span><span class="tok-var">DiseaseSymptoms</span><span class="tok-punc">,</span> <span class="tok-var">Total</span><span class="tok-punc">),</span>
+    <span class="tok-pred">count_matching_symptoms</span><span class="tok-punc">(</span><span class="tok-var">DiseaseSymptoms</span><span class="tok-punc">,</span> <span class="tok-var">UserSymptoms</span><span class="tok-punc">,</span> <span class="tok-var">Matched</span><span class="tok-punc">),</span>
+    <span class="tok-var">Percentage</span> <span class="tok-punc">is (</span><span class="tok-var">Matched</span> <span class="tok-punc">/</span> <span class="tok-var">Total</span><span class="tok-punc">) *</span> <span class="tok-atom">100</span><span class="tok-punc">.</span>
+
+<span class="tok-pred">diagnose</span><span class="tok-punc">(</span><span class="tok-var">UserSymptoms</span><span class="tok-punc">,</span> <span class="tok-var">Disease</span><span class="tok-punc">,</span> <span class="tok-var">Pct</span><span class="tok-punc">,</span> <span class="tok-var">Desc</span><span class="tok-punc">,</span> <span class="tok-var">Sev</span><span class="tok-punc">,</span> <span class="tok-var">Prec</span><span class="tok-punc">) :-</span>
+    <span class="tok-pred">disease</span><span class="tok-punc">(</span><span class="tok-var">Disease</span><span class="tok-punc">,</span> <span class="tok-var">DiseaseSymptoms</span><span class="tok-punc">,</span> <span class="tok-var">Desc</span><span class="tok-punc">,</span> <span class="tok-var">Sev</span><span class="tok-punc">,</span> <span class="tok-var">Prec</span><span class="tok-punc">),</span>
+    <span class="tok-pred">match_percentage</span><span class="tok-punc">(</span><span class="tok-var">DiseaseSymptoms</span><span class="tok-punc">,</span> <span class="tok-var">UserSymptoms</span><span class="tok-punc">,</span> <span class="tok-var">Pct</span><span class="tok-punc">),</span>
+    <span class="tok-var">Pct</span> <span class="tok-punc">>=</span> <span class="tok-atom">50</span><span class="tok-punc">.</span>  <span class="tok-comment">% Threshold: ≥ 50% symptom match</span>
+
+<span class="tok-comment">% QUERY — Run this in SWI-Prolog:</span>
+<span class="tok-comment">% ?- diagnose_from_symptoms([fever, cough, fatigue], Results).</span>`;
+
+  document.getElementById('prologDisplay').innerHTML = code;
+}
+
+init();
+</script>
+</body>
+</html>
